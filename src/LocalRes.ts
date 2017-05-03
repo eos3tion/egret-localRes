@@ -67,7 +67,7 @@ module junyou {
                         request.onsuccess = function (e: Event) {
                             callback((e.target as IDBRequest).result);
                         };
-                    });
+                    }, e => { callback(null) });
                 },
                 /**
                  * 删除指定资源
@@ -95,9 +95,17 @@ module junyou {
                     });
                 }
             }
-            function open(callback: { (result: IDBDatabase) }) {
-                let request = indexedDB.open(storeName, version);
-                request.onerror = errorHandler;
+            function open(callback: { (result: IDBDatabase) }, onError?: { (e: Error) }) {
+                try {
+                    var request = indexedDB.open(storeName, version);
+                } catch (e) {
+                    egret.error(`indexedDB error:\n${e}`);
+                    return onError && onError(e);
+                }
+                request.onerror = (e: ErrorEvent) => {
+                    onError && onError(e.error);
+                    errorHandler(e);
+                }
                 request.onupgradeneeded = e => {
                     let _db = (e.target as IDBOpenDBRequest).result as IDBDatabase;
                     let names = _db.objectStoreNames;
@@ -117,7 +125,7 @@ module junyou {
             }
 
             function errorHandler(ev: ErrorEvent) {
-                egret.error(`indexedDB error`, ev.error);
+                egret.error(`indexedDB error:\n${ev.error}`);
             }
         })(version);
         const canvas = document.createElement("canvas");
@@ -169,12 +177,12 @@ module junyou {
                     } else {
                         // 普通图片
                         // 尝试转换成DataURL，此方法为同步方法，可能会影响性能
-                        let data = request.data as egret.BitmapData;
-                        if (data instanceof egret.BitmapData) {
-                            let img = data.source as HTMLImageElement;
+                        let dat = request.data as egret.BitmapData;
+                        if (dat instanceof egret.BitmapData) {
+                            let img = dat.source as HTMLImageElement;
                             let w = img.width;
                             let h = img.height;
-                            let type = getType(url);
+                            let type = "image/" + url.substring(url.lastIndexOf(".") + 1);
                             canvas.width = w;
                             canvas.height = h;
                             context.clearRect(0, 0, w, h);
@@ -210,20 +218,15 @@ module junyou {
                         }
                     }
                 }
-
                 item.loaded = (event.$type == egret.Event.COMPLETE);
                 if (item.loaded) {
                     let texture: egret.Texture = new egret.Texture();
                     texture._setBitmapData(request.data);
-
                     this.analyzeData(item, texture)
                 }
                 delete (request as any).request
                 this.recycler.push(request);
                 return data.func.call(data.thisObject, item);
-                function getType(url: string) {
-                    return "image/" + url.substring(url.lastIndexOf(".") + 1);
-                }
             }
         }
         RES.registerAnalyzer(RES.ResourceItem.TYPE_IMAGE, ImageAnalyzer);
