@@ -1,4 +1,4 @@
-namespace junyou {
+module junyou {
 
     /**
      *  尝试启用本地资源缓存
@@ -29,7 +29,8 @@ namespace junyou {
             w.msIDBKeyRange;
 
         w.URL = window.URL || w.webkitURL;
-        const canUseBlob = !!(window.Blob && window.URL);
+        //当前ios10还不支持IndexedDB的Blob存储，所以如果是ios，则此值为false
+        const canUseBlob = egret.Capabilities.os == "iOS" ? false : !!(window.Blob && window.URL);
         /**
          * 本地数据库操作
          */
@@ -173,7 +174,7 @@ namespace junyou {
                             let img = data.source as HTMLImageElement;
                             let w = img.width;
                             let h = img.height;
-                            let type = "image/" + url.substring(url.lastIndexOf(".") + 1);
+                            let type = getType(url);
                             canvas.width = w;
                             canvas.height = h;
                             context.clearRect(0, 0, w, h);
@@ -194,9 +195,19 @@ namespace junyou {
                         }
                     }
                     if (local) {
-                        item.local = local;
-                        //存储数据
-                        db.save(item);
+                        if (!canUseBlob && typeof local !== "string") {
+                            let a = new FileReader();
+                            a.onload = function (this, e) {
+                                item.local = this.result;
+                                //存储数据
+                                db.save(item);
+                            };
+                            a.readAsDataURL(local);
+                        } else {
+                            item.local = local;
+                            //存储数据
+                            db.save(item);
+                        }
                     }
                 }
 
@@ -210,6 +221,9 @@ namespace junyou {
                 delete (request as any).request
                 this.recycler.push(request);
                 return data.func.call(data.thisObject, item);
+                function getType(url: string) {
+                    return "image/" + url.substring(url.lastIndexOf(".") + 1);
+                }
             }
         }
         RES.registerAnalyzer(RES.ResourceItem.TYPE_IMAGE, ImageAnalyzer);
