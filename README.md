@@ -58,3 +58,9 @@ Android手机，大多也在4.4.4以上，[国内Android系统版本排名](http
 
  ## 资源的版本变更
  可以自行整理资源的hash文件，通过比对hash文件的变更，使用上述删除接口进行删除过期资源
+
+ ## 隐患
+ 目前`safari`浏览器，并未完全按标准实现`IndexedDB`的安全策略，或者是按老旧的标准进行实现的  
+ https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Using_IndexedDB#Security   
+ 导致目前`Mac`以及`IOS`上的`safari`浏览器，如果框架页内页和外页使用不同的域名，内页将无法使用IndexedDB，
+ 导致在open的时候会抛出一个SecurityError。
